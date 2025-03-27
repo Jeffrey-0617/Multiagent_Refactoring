@@ -1,0 +1,112 @@
+connector CSConnector { 
+	 role requester(j) = process -> req!j -> res?j -> Skip;
+	 role responder() = req?j -> invoke -> process -> res!j -> responder();
+ }
+connector ROConnector { 
+	 role extquerier(j) = request -> uid!j -> res?j -> process -> Skip;
+	 role blocksupplier() = uid?j -> process -> res!j -> blocksupplier();
+ }
+connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+ }
+connector CRConnector { 
+	 role readstore() = stmt?j -> process -> persist -> readstore();
+	 role commander(j) = process -> stmt!j -> cmmd!j -> Skip;
+	 role commandstore() = cmmd?j -> process -> persist -> commandstore();
+ }
+connector WRConnector { 
+	 role writer(j) = process -> req!j -> res?j -> Skip;
+	 role writestorage() = req?j -> invoke -> process -> res!j -> writestorage();
+ }
+connector REConnector { 
+	 role reader(j) = process -> req!j -> res?j -> Skip;
+	 role readstorage() = req?j -> invoke -> process -> res!j -> readstorage();
+ }
+connector PSConnector { 
+	 role publisher(j) = process -> pub!j -> Skip;
+	 role subscriber() = pub?j -> process -> subscriber();
+ }
+connector QRConnector { 
+	 role querier(j) = process -> stmt!j -> res?j -> Skip;
+	 role readstore() = stmt?j -> process -> res!j -> readstore();
+ }
+connector IOConnector { 
+	 role blockstorage() = token?j -> process -> stored -> blockstorage();
+	 role extsupplier(j) = process -> token!j -> extsupplier(j);
+ }
+
+component ManufacturerServe { 
+  port mrfprocess() = processed -> mrfprocess();
+}
+
+component ManufacturerApp { 
+  port mrfretrieve() = processororder -> mrfretrieve();
+}
+
+component MiddlemanServe { 
+  port mmprocess() = processed -> mmprocess();
+}
+
+component MiddlemanApp { 
+  port mmretrieve() = processororder -> mmretrieve();
+}
+
+component BuyerServe { 
+  port createorder() = transcreated -> createorder();
+}
+
+component BuyerApp { 
+  port order() = issue -> order();
+}
+
+component CarrierApp { 
+  port crretrieve() = processororder -> crretrieve();
+}
+
+component CarrierServe { 
+  port crprocess() = processed -> crprocess();
+}
+
+component OrderTransaction { 
+  port insert() = orderinsert -> insert();
+  port check() = verified -> check();
+}
+
+component BillOfMaterial { 
+  port query() = bomqueried -> query();
+}
+
+component OrderTransactionOracle { 
+  port supply() = supplied -> supply();
+}
+
+component OrderTransactionBlockchain { 
+  port orderappend() = appended -> orderappend();
+  port ordaccess() = accessed -> ordaccess();
+}
+
+system supplychain { 
+   declare orderwire = CSConnector;
+   declare transinwire = WRConnector;
+   declare transcheckwire = REConnector;
+   declare mfreadwire = REConnector;
+   declare mfprocwire = CSConnector;
+   declare mmprocwire = CSConnector;
+   declare crprocwire = CSConnector;
+
+	attach BuyerApp.order() = orderwire.requester(52);
+	attach BuyerServe.createorder() = orderwire.responder() <*> transinwire.writer(71);
+	attach OrderTransaction.check() = transcheckwire.readstorage();
+	attach OrderTransaction.insert() = transinwire.writestorage();
+	attach CarrierServe.crprocess() = crprocwire.responder() <*> transcheckwire.reader(23);
+	attach BillOfMaterial.query() = mfreadwire.readstorage();
+	attach CarrierApp.crretrieve() = crprocwire.requester(31);
+	attach MiddlemanServe.mmprocess() = mmprocwire.responder() <*> transcheckwire.reader(18);
+	attach MiddlemanApp.mmretrieve() = mmprocwire.requester(12);
+	attach ManufacturerApp.mrfretrieve() = mfprocwire.requester(42);
+	attach ManufacturerServe.mrfprocess() = mfprocwire.responder() <*> mfreadwire.reader(56) <*> transcheckwire.reader(17);
+
+	execute BuyerApp.order() || BuyerServe.createorder() || OrderTransaction.check() || OrderTransaction.insert() || CarrierServe.crprocess() || BillOfMaterial.query() || CarrierApp.crretrieve() || MiddlemanServe.mmprocess() || MiddlemanApp.mmretrieve() || ManufacturerApp.mrfretrieve() || ManufacturerServe.mrfprocess();
+}

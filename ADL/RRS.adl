@@ -1,0 +1,101 @@
+connector CSConnector { 
+	 role requester(j) = process -> req!j -> res?j -> Skip;
+	 role responder() = req?j -> invoke -> process -> res!j -> responder();
+ }
+connector ROConnector { 
+	 role extquerier(j) = request -> uid!j -> res?j -> process -> Skip;
+	 role blocksupplier() = uid?j -> process -> res!j -> blocksupplier();
+ }
+connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+ }
+connector CRConnector { 
+	 role readstore() = stmt?j -> process -> persist -> readstore();
+	 role commander(j) = process -> stmt!j -> cmmd!j -> Skip;
+	 role commandstore() = cmmd?j -> process -> persist -> commandstore();
+ }
+connector WRConnector { 
+	 role writer(j) = process -> req!j -> res?j -> Skip;
+	 role writestorage() = req?j -> invoke -> process -> res!j -> writestorage();
+ }
+connector REConnector { 
+	 role reader(j) = process -> req!j -> res?j -> Skip;
+	 role readstorage() = req?j -> invoke -> process -> res!j -> readstorage();
+ }
+connector PSConnector { 
+	 role publisher(j) = process -> pub!j -> Skip;
+	 role subscriber() = pub?j -> process -> subscriber();
+ }
+connector QRConnector { 
+	 role querier(j) = process -> stmt!j -> res?j -> Skip;
+	 role readstore() = stmt?j -> process -> res!j -> readstore();
+ }
+connector IOConnector { 
+	 role blockstorage() = token?j -> process -> stored -> blockstorage();
+	 role extsupplier(j) = process -> token!j -> extsupplier(j);
+ }
+component PassengerUI { 
+	 port call() = callride->call();
+	 port pay() = issuepay->pay();
+	 port plogin() = login->plogin();
+}
+component TripMgmt { 
+	 port accept() = acknowledged->accept();
+}
+component DriverUI { 
+	 port notify() = notified->notify();
+	 port dlogin() = login->dlogin();
+	 port locate() = located->locate();
+}
+component DriverRecord { 
+	 port driverquery() = quried->driverquery();
+	 port driverupdate() = updated->driverupdate();
+}
+component Payment { 
+	 port record() = payrecorded->record();
+	 port list() = listed->list();
+}
+component BillingGateway { 
+	 port process() = processed->process();
+}
+component SignOn { 
+	 port auth() = authenticated->auth();
+}
+component UserDB { 
+	 port find() = queried->find();
+}
+component AssignLog { 
+	 port logassign() = logged->logassign();
+}
+component DriverCommandLog { 
+	 port logdriver() = logged->logdriver();
+}
+
+system rideshare {
+	 declare callwire = CSConnector; 
+	 declare assignwire = ESConnector; 
+	 declare driverquerywire = QRConnector; 
+	 declare authwire = CSConnector; 
+	 declare userquerywire = REConnector; 
+	 declare driverupdatewire = CRConnector; 
+	 declare paywire = WRConnector; 
+	 declare billwire = REConnector; 
+	 attach PassengerUI.call() = callwire.requester(10);
+	 attach TripMgmt.accept() = callwire.responder() <*> driverquerywire.querier(51) <*> assignwire.eventpublisher(94);
+	 attach DriverUI.notify() = assignwire.eventsubscriber();
+	 attach DriverUI.locate() = driverupdatewire.commander(95);
+	 attach DriverRecord.driverquery() = driverquerywire.readstore();
+	 attach DriverRecord.driverupdate() = driverupdatewire.readstore();
+	 attach PassengerUI.pay() = paywire.writer(34);
+	 attach PassengerUI.plogin() = authwire.requester(57);
+	 attach Payment.record() = paywire.writestorage();
+	 attach Payment.list() = billwire.readstorage();
+	 attach BillingGateway.process() = billwire.reader(85);
+	 attach SignOn.auth() = authwire.responder() <*> userquerywire.reader(80);
+	 attach UserDB.find() = userquerywire.readstorage();
+	 attach AssignLog.logassign() = assignwire.eventstore();
+	 attach DriverCommandLog.logdriver() = driverupdatewire.commandstore();
+	 execute PassengerUI.call() || TripMgmt.accept() || DriverUI.notify() || DriverRecord.driverquery() || DriverRecord.driverupdate() || PassengerUI.plogin() || PassengerUI.pay() || BillingGateway.process() || Payment.record() || Payment.list() || SignOn.auth() || UserDB.find() || AssignLog.logassign() || DriverCommandLog.logdriver();
+}

@@ -1,0 +1,108 @@
+connector CSConnector { 
+  role requester(j) = process -> req!j -> res?j -> Skip;
+  role responder() = req?j -> invoke -> process -> res!j -> responder();
+}
+connector ROConnector { 
+  role querier(j) = request -> uid!j -> res?j -> process -> Skip;
+  role readstore() = uid?j -> process -> res!j -> readstore();
+}
+connector IOConnector { 
+   role extsupplier(j) = process -> token!j -> extsupplier(j);
+	 role blockstorage() = token?j -> process -> stored -> blockstorage();
+ }
+connector QRConnector { 
+	 role querier(j) = process -> stmt!j -> res?j -> Skip;
+	 role readstore() = stmt?j -> process -> res!j -> readstore();
+ }
+connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+ }
+connector CRConnector { 
+	 role readstore() = stmt?j -> process -> persist -> readstore();
+	 role commander(j) = process -> stmt!j -> cmmd!j -> Skip;
+	 role commandstore() = cmmd?j -> process -> persist -> commandstore();
+ }
+connector PSConnector { 
+  role publisher(j) = process -> pub!j -> Skip;
+  role subscriber() = pub?j -> process -> subscriber();
+}
+connector WRConnector { 
+	 role writer(j) = process -> req!j -> res?j -> Skip;
+	 role writestorage() = req?j -> invoke -> process -> res!j -> writestorage();
+ }
+connector REConnector { 
+  role reader(j) = process -> req!j -> res?j -> Skip;
+  role readstorage() = req?j -> invoke -> process -> res!j -> readstorage();
+}
+
+component LifeBand { 
+  port alert() = onalert -> alert();
+}
+
+component SOSGateway { 
+  port sos() = acknowledge -> sos();
+}
+
+component RequestDispatcher { 
+  port accept() = dispatched -> accept();
+}
+
+component LifeGuard { 
+  port gnotify() = acknowlege -> gnotify();
+}
+
+component LifeCare { 
+  port cnotify() = acknowlege -> cnotify();
+}
+
+component Practitioner { 
+  port pgaccess() = return -> pgaccess();
+  port pgupdate() = return -> pgupdate();
+}
+
+component EmCenter { 
+  port emaccess() = emaccessed -> emaccess();
+  port emupdate() = updated -> emupdate();
+}
+
+component Patient { 
+  port ptaccess() = ptaccessed -> ptaccess();
+  port ptupdate() = ptcommit -> ptupdate();
+}
+
+component BackOffice { 
+  port updateprofile() = issueupdate -> updateprofile();
+}
+
+component HospitalMgmt { 
+  port updaterec() = updated -> updaterec();
+}
+
+system lifenet { 
+
+  declare dispatchwire = CSConnector;
+  declare guardnoti = PSConnector;
+  declare emwire = REConnector;
+  declare pgwire = REConnector;
+  declare ptwire = REConnector;
+  declare emupwire = WRConnector;
+  declare pgupwire = WRConnector;
+  declare soswire = CSConnector;
+  declare ptupwire = WRConnector;
+        
+  attach LifeBand.alert() = soswire.requester(1);
+  attach SOSGateway.sos() = soswire.responder() <*> dispatchwire.requester(2);
+  attach RequestDispatcher.accept() = dispatchwire.responder() <*> emwire.reader(3) <*> pgwire.reader(4) <*> guardnoti.publisher(5);
+  attach EmCenter.emupdate() = emupwire.writestorage();
+  attach EmCenter.emaccess() = emwire.readstorage();
+  attach BackOffice.updateprofile() = emupwire.writer(9) <*> pgupwire.writer(10);
+  attach LifeGuard.gnotify() = guardnoti.subscriber() <*> ptwire.reader(6);
+  attach Practitioner.pgaccess() = pgwire.readstorage();
+  attach Practitioner.pgupdate() = pgupwire.writestorage();
+  attach Patient.ptaccess() = ptwire.readstorage();
+  attach Patient.ptupdate() = ptupwire.writestorage();
+  attach HospitalMgmt.updaterec() = ptupwire.writer(8);
+  execute BackOffice.updateprofile() || EmCenter.emupdate() || EmCenter.emaccess() || LifeBand.alert() || SOSGateway.sos() || RequestDispatcher.accept() || LifeGuard.gnotify() || Practitioner.pgaccess() || Practitioner.pgupdate() || Patient.ptaccess() || Patient.ptupdate() || HospitalMgmt.updaterec();
+}

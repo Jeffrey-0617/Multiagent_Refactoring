@@ -1,0 +1,122 @@
+connector CSConnector { 
+  role requester(j) = process -> req!j -> res?j -> Skip;
+  role responder() = req?j -> invoke -> process -> res!j -> responder();
+}
+connector ROConnector { 
+  role querier(j) = request -> uid!j -> res?j -> process -> Skip;
+  role readstore() = uid?j -> process -> res!j -> readstore();
+}
+connector IOConnector { 
+   role extsupplier(j) = process -> token!j -> extsupplier(j);
+	 role blockstorage() = token?j -> process -> stored -> blockstorage();
+ }
+connector QRConnector { 
+	 role querier(j) = process -> stmt!j -> res?j -> Skip;
+	 role readstore() = stmt?j -> process -> res!j -> readstore();
+ }
+connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+ }
+connector CRConnector { 
+	 role readstore() = stmt?j -> process -> persist -> readstore();
+	 role commander(j) = process -> stmt!j -> cmmd!j -> Skip;
+	 role commandstore() = cmmd?j -> process -> persist -> commandstore();
+ }
+connector PSConnector { 
+  role publisher(j) = process -> pub!j -> Skip;
+  role subscriber() = pub?j -> process -> subscriber();
+}
+connector WRConnector { 
+  role writer(j) = request -> req!j -> res?j -> process -> Skip;
+  role writestorage() = req?j -> invoke -> process -> res!j -> writestorage();
+}
+connector REConnector { 
+  role reader(j) = process -> req!j -> res?j -> Skip;
+  role readstorage() = req?j -> invoke -> process -> res!j -> readstorage();
+}
+
+component ShopFrontend { 
+  port login() = submit -> login();
+  port browse() = read -> browse();
+  port order() = purchased -> order();
+  port shop() = itemadded -> shop();
+}
+
+component CatalogueService { 
+  port list() = query -> list();
+}
+
+component UserService { 
+  port auth() = checked -> auth();
+}
+
+component OrdersService { 
+  port postorder() = check -> postorder();
+  port get() = ack -> get();
+}
+
+component OrdersDB { 
+  port writereader() = orderwritten -> writereader();
+  port queryorder() = orderreaded -> queryorder();
+}
+
+component CartsService { 
+  port manage() = saveitem -> manage();
+}
+
+component Payment { 
+  port pay() = paid -> pay();
+}
+
+component ShippingService { 
+  port postshipping() = posted -> postshipping();
+}
+
+component ShippingWorker { 
+  port listqueue() = queueread -> listqueue();
+}
+
+component QueueDB { 
+  port writequeue() = queuewritten -> writequeue();
+  port readqueue() = queueread -> readqueue();
+}
+
+component ShopBackend { 
+  port listorder() = renderlist -> listorder();
+}
+
+system eshop { 
+
+  declare userwire = CSConnector;        
+  declare catelequewire = CSConnector;    
+  declare orderquerywire = CSConnector;   
+  declare cartwire = CSConnector;         
+  declare shippingwire = CSConnector;     
+  declare queuereadwire = REConnector;    
+  declare shippinglogwire = WRConnector;  
+  declare orderlogwire = WRConnector;     
+  declare orderreadwire = REConnector;    
+  declare orderwire = PSConnector;        
+  declare paywire = WRConnector;          
+
+  attach ShopBackend.listorder() = orderquerywire.requester(1);
+  attach OrdersService.get() = orderquerywire.responder() <*> orderreadwire.reader(2);
+  attach OrdersService.postorder() = orderwire.subscriber() <*> orderlogwire.writer(3) <*> paywire.writer(98) <*> shippingwire.requester(28);
+  attach OrdersDB.queryorder() = orderreadwire.readstorage();
+  attach OrdersDB.writereader() = orderlogwire.writestorage();
+  attach Payment.pay() = paywire.writestorage();
+  attach UserService.auth() = userwire.responder();
+  attach ShopFrontend.browse() = catelequewire.requester(48);
+  attach ShopFrontend.login() = userwire.requester(93);
+  attach ShopFrontend.order() = orderwire.publisher(62);
+  attach ShopFrontend.shop() = cartwire.requester(31);
+  attach CartsService.manage() = cartwire.responder();
+  attach CatalogueService.list() = catelequewire.responder();
+  attach ShippingService.postshipping() = shippingwire.responder() <*> shippinglogwire.writer(65);
+  attach ShippingWorker.listqueue() = queuereadwire.reader(13);
+  attach QueueDB.readqueue() = queuereadwire.readstorage();
+  attach QueueDB.writequeue() = shippinglogwire.writestorage();
+  execute ShopBackend.listorder() || OrdersService.get() || OrdersService.postorder() || OrdersDB.queryorder() || OrdersDB.writereader() || Payment.pay() || UserService.auth() || ShopFrontend.order() || ShopFrontend.login() || ShopFrontend.browse() || ShopFrontend.shop() || CartsService.manage() || CatalogueService.list() || ShippingService.postshipping() || ShippingWorker.listqueue() || QueueDB.readqueue() || QueueDB.writequeue();
+}

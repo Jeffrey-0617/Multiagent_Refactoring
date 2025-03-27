@@ -1,0 +1,110 @@
+connector CSConnector { 
+	 role requester(j) = process -> req!j -> res?j -> Skip;
+	 role responder() = req?j -> invoke -> process -> res!j -> responder();
+ }
+connector ROConnector { 
+	 role extquerier(j) = request -> uid!j -> res?j -> process -> Skip;
+	 role blocksupplier() = uid?j -> process -> res!j -> blocksupplier();
+ }
+connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+ }
+connector CRConnector { 
+	 role readstore() = stmt?j -> process -> persist -> readstore();
+	 role commander(j) = process -> stmt!j -> cmmd!j -> Skip;
+	 role commandstore() = cmmd?j -> process -> persist -> commandstore();
+ }
+connector WRConnector { 
+	 role writer(j) = process -> req!j -> res?j -> Skip;
+	 role writestorage() = req?j -> invoke -> process -> res!j -> writestorage();
+ }
+connector REConnector { 
+	 role reader(j) = process -> req!j -> res?j -> Skip;
+	 role readstorage() = req?j -> invoke -> process -> res!j -> readstorage();
+ }
+connector PSConnector { 
+	 role publisher(j) = process -> pub!j -> Skip;
+	 role subscriber() = pub?j -> process -> subscriber();
+ }
+connector QRConnector { 
+	 role querier(j) = process -> stmt!j -> res?j -> Skip;
+	 role readstore() = stmt?j -> process -> res!j -> readstore();
+ }
+connector IOConnector { 
+	 role blockstorage() = token?j -> process -> stored -> blockstorage();
+	 role extsupplier(j) = process -> token!j -> extsupplier(j);
+ }
+
+component Signon { 
+  port auth() = logined -> auth();
+}
+
+component AccountStore { 
+  port lookup() = return -> lookup();
+}
+
+component BookingService { 
+  port sendnews() = sended -> sendnews();
+  port findbook() = viewed -> findbook();
+  port managebook() = managed -> managebook();
+  port makebook() = booked -> makebook();
+}
+
+component CustomerApp { 
+  port login() = submit -> login();
+  port book() = submit -> book();
+  port newsfeed() = submit -> newsfeed();
+}
+
+component ManagerApp { 
+  port mlogin() = submit -> mlogin();
+  port update() = managed -> update();
+}
+
+component NotificationService { 
+  port storeevent() = sended -> storeevent();
+}
+
+component BookingStore { 
+  port readbook() = queried -> readbook();
+  port writebook() = recorded -> writebook();
+}
+
+component PaymentGateway { 
+  port pay() = cleared -> pay();
+}
+
+component BookingViewer { 
+  port viewbook() = view -> viewbook();
+}
+
+system hotelbook { 
+	declare paywire = CSConnector;
+	declare managewire = CSConnector;
+	declare bookingwire = CSConnector;
+	declare viewwire = CSConnector;
+	declare bookreadwire = REConnector;
+	declare bookwritewire = WRConnector;
+	declare newswire = ESConnector;
+	declare lookupwire = REConnector;
+	declare loginwire = CSConnector;
+	attach AccountStore.lookup() = lookupwire.readstorage();
+  	attach Signon.auth() = loginwire.responder() <*> lookupwire.reader(31);
+  	attach CustomerApp.login() = loginwire.requester(16);
+  	attach CustomerApp.book() = bookingwire.requester(13);
+  	attach CustomerApp.newsfeed() = newswire.eventsubscriber();
+  	attach ManagerApp.update() = managewire.requester(27);
+  	attach ManagerApp.mlogin() = loginwire.requester(97);
+  	attach BookingService.makebook() = bookingwire.responder() <*> bookwritewire.writer(86) <*> paywire.requester(14);
+  	attach BookingService.managebook() = managewire.responder() <*> bookwritewire.writer(21);
+  	attach BookingService.findbook() = viewwire.responder() <*> bookreadwire.reader(67);
+  	attach BookingService.sendnews() = newswire.eventpublisher(18);
+  	attach BookingViewer.viewbook() = viewwire.requester(17);
+  	attach BookingStore.readbook() = bookreadwire.readstorage();
+  	attach BookingStore.writebook() = bookwritewire.writestorage();
+  	attach PaymentGateway.pay() = paywire.responder();
+  	attach NotificationService.storeevent() = newswire.eventstore();
+  	execute AccountStore.lookup() || Signon.auth() || CustomerApp.login() || CustomerApp.book() || CustomerApp.newsfeed() || ManagerApp.update() || ManagerApp.mlogin() || BookingService.makebook() || BookingService.managebook() || BookingService.findbook() || BookingService.sendnews() || BookingViewer.viewbook() || BookingStore.readbook() || BookingStore.writebook() || PaymentGateway.pay() || NotificationService.storeevent();
+}
