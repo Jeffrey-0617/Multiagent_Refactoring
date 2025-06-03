@@ -1,0 +1,159 @@
+connector CSConnector { 
+	 role requester(j) = process -> req!j -> res?j -> Skip;
+	 role responder() = req?j -> invoke -> process -> res!j -> responder();
+ }
+
+connector HIREConnector {
+    role recruiter(j) = open_position -> process -> application!j -> notify?j -> result!j -> Skip;
+    role candidate() = result?j -> invoke -> process -> candidate();
+    role hrreview() = application?j -> process -> evaluate -> notify!j -> hrreview();
+}
+
+connector ONBOARDConnector {
+    role hr(j) = offer_letter -> process -> onboard!j -> confirm?j -> Skip;
+    role newhire() = onboard?j -> process -> setup -> confirm!j -> newhire();
+}
+
+connector TRAINConnector {
+    role hr(j) = assign_training -> process -> enroll!j -> Skip;
+    role staff() = enroll?j -> learn -> process -> staff();
+}
+
+connector EVALConnector {
+    role supervisor(j) = start_eval -> process -> eval!j -> feedback?j -> Skip;
+    role employee() = eval?j -> process -> reflect -> feedback!j -> employee();
+}
+
+connector REPORTConnector {
+    role manager(j) = submit_report -> process -> report!j -> receive?j -> Skip;
+    role executive() = report?j -> process -> assess -> receive!j -> executive();
+}
+
+connector PROMOTIONConnector {
+    role leader(j) = propose_promotion -> process -> promo!j -> verdict?j -> Skip;
+    role hrboard() = promo?j -> process -> approve -> verdict!j -> hrboard();
+}
+
+connector TRANSFERConnector {
+    role initiator(j) = request_transfer -> process -> transferreq!j -> reply?j -> Skip;
+    role ops() = transferreq?j -> process -> evaluate -> reply!j -> ops();
+}
+
+component RecruitmentPortal {
+    port post() = open_position -> post();
+}
+
+component HRSystem {
+    port review() = evaluate -> review();
+    port onboard() = offer_letter -> onboard();
+    port train() = assign_training -> train();
+    port approve() = approved -> approve();
+}
+
+component Candidate {
+    port apply() = application -> apply();
+}
+
+component Developer {
+    port accept() = setup -> accept();
+    port trainDeveloper() = learnD -> trainDeveloper();
+    port evalDeveloper() = reflectD -> evalDeveloper();
+}
+
+component Artist {
+    port trainArtist() = learnA -> trainArtist();
+    port evalArtist() = reflectA -> evalArtist();
+}
+
+component MarketingSpecialist {
+    port trainMS() = learnM -> trainMS();
+    port evalMS() = reflectM -> evalMS();
+}
+
+component FinanceAnalyst {
+    port evalFinanceAnalyst() = reflectF -> evalFinanceAnalyst();
+}
+
+component LeaveApp {
+    port request() = submit_leave -> request();
+}
+
+component TeamManager {
+    port authorize() = review -> authorize();
+    port evaluate() = start_eval -> evaluate();
+    port report() = submit_report -> report();
+    port propose() = propose_promotion -> propose();
+}
+
+component ProjectManager {
+    port evaluate() = start_eval -> evaluate();
+}
+
+component OpsDept {
+    port transfer() = request_transfer -> transfer();
+}
+
+component CEO {
+    port assess() = assessed -> assess();
+}
+
+component TrainMgmt {
+    port accept() = acknowledged -> accept();
+}
+
+component EvalMgmt {
+    port Evalaccept() = evalacknowledged -> Evalaccept();
+}
+
+system GameCompany_HR_system {
+    declare hirelink = HIREConnector;
+    declare onboardlink = ONBOARDConnector;
+    declare leavelink = CSConnector;
+    declare trainMgmtwire = CSConnector;
+    declare trainlinkD = TRAINConnector;
+    declare trainlinkA = TRAINConnector;
+    declare trainlinkM = TRAINConnector;
+    declare evalMgmtwire = CSConnector;
+    declare evallinkD = EVALConnector;
+    declare evallinkA = EVALConnector;
+    declare evallinkM = EVALConnector;
+    declare evallinkF = EVALConnector;
+    declare reportlink = REPORTConnector;
+    declare promotionlink = PROMOTIONConnector;
+    declare transferlink = TRANSFERConnector;
+
+    attach RecruitmentPortal.post() = hirelink.recruiter(101);
+    attach HRSystem.review() = hirelink.hrreview();
+    attach Candidate.apply() = hirelink.candidate();
+
+    attach HRSystem.onboard() = onboardlink.hr(201);
+    attach Developer.accept() = onboardlink.newhire();
+
+    attach LeaveApp.request() = leavelink.requester(301);
+    attach TeamManager.authorize() = leavelink.responder();
+
+    attach HRSystem.train() = trainMgmtwire.requester(401);
+    attach TrainMgmt.accept() = trainMgmtwire.responder() <*> trainlinkD.hr(402) <*> trainlinkA.hr(403) <*> trainlinkM.hr(404);
+    attach Developer.trainDeveloper() = trainlinkD.staff();
+    attach Artist.trainArtist() = trainlinkA.staff();
+    attach MarketingSpecialist.trainMS() = trainlinkM.staff();
+
+    attach TeamManager.evaluate() = evalMgmtwire.requester(501);
+    attach EvalMgmt.Evalaccept() = evalMgmtwire.responder() <*> evallinkD.supervisor(502) <*> evallinkA.supervisor(503) <*> evallinkM.supervisor(504) <*> evallinkF.supervisor(505);
+    attach Developer.evalDeveloper() = evallinkD.employee();
+    attach Artist.evalArtist() = evallinkA.employee();
+    attach MarketingSpecialist.evalMS() = evallinkM.employee();
+    attach FinanceAnalyst.evalFinanceAnalyst() = evallinkF.employee();
+
+
+    attach TeamManager.report() = reportlink.manager(601);
+    attach CEO.assess() = reportlink.executive();
+
+    attach TeamManager.propose() = promotionlink.leader(701);
+    attach HRSystem.approve() = promotionlink.hrboard();
+
+    attach Developer.accept() = transferlink.initiator(801);
+    attach OpsDept.transfer() = transferlink.ops();
+    
+    execute RecruitmentPortal.post() || HRSystem.review() || Candidate.apply() || HRSystem.onboard() || Developer.accept() || LeaveApp.request() || TeamManager.authorize() || HRSystem.train() || TrainMgmt.accept() || Developer.trainDeveloper() || Artist.trainArtist() || MarketingSpecialist.trainMS() || TeamManager.evaluate() || EvalMgmt.Evalaccept() || Developer.evalDeveloper() || Artist.evalArtist() || MarketingSpecialist.evalMS() || FinanceAnalyst.evalFinanceAnalyst() || TeamManager.report() || CEO.assess() || TeamManager.propose() || HRSystem.approve() || OpsDept.transfer();
+}

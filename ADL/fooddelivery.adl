@@ -1,0 +1,160 @@
+connector ORDERConnector {
+    role orderrequester(j) = process -> order!j -> ready?j -> Skip;
+    role orderresponder() = order?j -> process -> ready!j -> orderresponder();
+}
+
+connector DELIVERYConnector {
+    role restaurant(j) = dispatch_food -> process -> pickup!j -> dropoff?j -> Skip;
+    role rider() = pickup?j -> process -> deliver -> dropoff!j -> rider();
+}
+
+connector TRACKConnector {
+    role customer(j) = request_status -> process -> query!j -> update?j -> Skip;
+    role statusresponder() = query?j -> process -> respond -> update!j -> statusresponder();
+}
+
+connector ISSUEConnector {
+    role user(j) = report_issue -> process -> ticket!j -> reply?j -> Skip;
+    role support() = ticket?j -> process -> investigate -> reply!j -> support();
+}
+
+connector MONITORConnector {
+    role appmonitor(j) = generate_data -> process -> datapoint!j -> receive?j -> Skip;
+    role analytics() = datapoint?j -> process -> analyze -> receive!j -> analytics();
+}
+
+connector PSConnector { 
+	 role publisher(j) = process -> pub!j -> Skip;
+	 role subscriber() = pub?j -> process -> subscriber();
+}
+
+connector WRConnector { 
+	 role writer(j) = process -> req!j -> res?j -> Skip;
+	 role writestorage() = req?j -> invoke -> process -> res!j -> writestorage();
+}
+
+connector CSConnector { 
+	 role requester(j) = process -> req!j -> res?j -> Skip;
+	 role responder() = req?j -> invoke -> process -> res!j -> responder();
+}
+
+connector REConnector { 
+	 role reader(j) = process -> req!j -> res?j -> Skip;
+	 role readstorage() = req?j -> invoke -> process -> res!j -> readstorage();
+}
+
+connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+ }
+
+component CustomerUI {
+    port order() = place_order -> order();
+    port track() = request_status -> track();
+    port reportC() = report_issue -> reportC();
+    port sendmessageC() = Customersentmessage -> sendmessageC();
+    port receivemessageC() = Customerreceivedmessage -> receivemessageC();
+    port searchfood() = searchedfood -> searchfood();
+}
+
+component RestaurantUI {
+    port receive() = received -> receive();
+    port dispatch() = dispatch_food -> dispatch();
+    port reportR() = report_issue -> reportR();
+    port notifymediaexposure() = notified_media_exposure -> notifymediaexposure();
+}
+
+component DeliveryUI {
+    port pickup() = pickedup -> pickup();
+    port deliver() = delivered -> deliver();
+    port reportD() = report_issue -> reportD();
+    port sendmessageD() = Deliverysentmessage -> sendmessageD();
+    port receivemessageD() = Deliveryreceivedmessage -> receivemessageD();
+}
+
+component TrackingServer {
+    port respond() = responded -> respond();
+}
+
+component SupportCenter {
+    port handle() = investigate -> handle();
+}
+
+component AdminUI {
+    port monitor() = generate_data -> monitor();
+}
+
+component DataAnalytics {
+    port analyze() = analyzed -> analyze();
+}
+
+component ConversationDB {
+    port store() = stored -> store();
+}
+
+component SearchPortal {
+    port accept() = accepted -> accept();
+}
+
+component LocationService {
+    port locate() = located -> locate();
+}
+
+component RestaurantList {
+    port access() = accessed -> access();
+}
+
+component SearchHistoryDB {
+    port record() = recorded -> record();
+}
+
+system fooddelivery {
+    declare orderwire = ORDERConnector;
+    declare deliverywire = DELIVERYConnector;
+    declare trackwire = TRACKConnector;
+    declare issuewire = ISSUEConnector;
+    declare monitorwire = MONITORConnector;
+    declare DtoCcontactwire = PSConnector;
+    declare CtoDcontactwire = PSConnector;
+    declare DCrecordwire = WRConnector;
+    declare CDrecordwire = WRConnector;
+    declare searchwire = CSConnector;
+    declare locationwire = CSConnector;
+    declare recommendwire = REConnector;
+    declare keywordcheckwire = ESConnector;
+
+    attach CustomerUI.order() = orderwire.orderrequester(101);
+    attach RestaurantUI.receive() = orderwire.orderresponder();
+
+    attach RestaurantUI.dispatch() = deliverywire.restaurant(201);
+    attach DeliveryUI.pickup() = deliverywire.rider();
+
+    attach CustomerUI.track() = trackwire.customer(301);
+    attach TrackingServer.respond() = trackwire.statusresponder();
+
+    attach CustomerUI.reportC() = issuewire.user(401);
+    attach RestaurantUI.reportR() = issuewire.user(402);
+    attach DeliveryUI.reportD() = issuewire.user(403);
+    attach SupportCenter.handle() = issuewire.support();
+
+    attach AdminUI.monitor() = monitorwire.appmonitor(501);
+    attach DataAnalytics.analyze() = monitorwire.analytics();
+
+    attach DeliveryUI.sendmessageD() = DtoCcontactwire.publisher(601);
+    attach CustomerUI.receivemessageC() = DtoCcontactwire.subscriber() <*> DCrecordwire.writer(602);
+    attach ConversationDB.store() = DCrecordwire.writestorage();
+
+    attach CustomerUI.sendmessageC() = CtoDcontactwire.publisher(701);
+    attach DeliveryUI.receivemessageD() = CtoDcontactwire.subscriber() <*> CDrecordwire.writer(702);
+    attach ConversationDB.store() = CDrecordwire.writestorage();
+
+    attach CustomerUI.searchfood() = searchwire.requester(801):
+    attach SearchPortal.accept() = searchwire.responder() <*> locationwire.requester(802) <*> recommendwire.reader(803);
+    attach LocationService.locate() = locationwire.responder();
+    attach RestaurantList.access() = recommendwire.readstorage() <*> keywordcheckwire.eventpublisher(804);
+    attach SearchHistoryDB.record() = keywordcheckwire.eventstore();
+    attach RestaurantUI.notifymediaexposure() = keywordcheckwire.eventsubscriber();
+
+    execute CustomerUI.order() || RestaurantUI.receive() || RestaurantUI.dispatch() || DeliveryUI.pickup() || DeliveryUI.deliver() || CustomerUI.track() || TrackingServer.respond() || CustomerUI.reportC() || RestaurantUI.reportR() || DeliveryUI.reportD() || SupportCenter.handle() || AdminUI.monitor() || DataAnalytics.analyze() || DeliveryUI.sendmessageD() || CustomerUI.receivemessageC() || ConversationDB.store() || CustomerUI.sendmessageC() || DeliveryUI.receivemessageD() || CustomerUI.searchfood() || SearchPortal.accept() || LocationService.locate() || RestaurantList.access() || SearchHistoryDB.record() || RestaurantUI.notifymediaexposure();
+}

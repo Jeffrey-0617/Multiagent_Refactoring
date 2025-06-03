@@ -1,0 +1,221 @@
+connector CSConnector { 
+	 role sender(j) = process -> req!j -> res?j -> Skip;
+	 role receiver() = req?j -> invoke -> process -> res!j -> receiver();
+ }
+
+connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+ }
+
+connector WRConnector { 
+	role writer(j) = process -> req!j -> res?j -> Skip;
+	role writestorage() = req?j -> invoke -> process -> res!j -> writestorage();
+ }
+
+connector REConnector { 
+	role reader(j) = process -> req!j -> res?j -> Skip;
+	role readstorage() = req?j -> invoke -> process -> res!j -> readstorage();
+ }
+
+connector QRConnector {
+    role querier(j) = query -> stmt!j -> result?j -> Skip;
+    role readstore() = stmt?j -> process -> result!j -> readstore();
+}
+
+connector TXConnector {
+    role taxpayer(j) = submit_tax -> tx!j -> confirm?j -> Skip;
+    role taxoffice() = tx?j -> validate -> process -> confirm!j -> taxoffice();
+}
+
+connector LOConnector {
+    role applicant(j) = apply -> req!j -> score?j -> review -> Skip;
+    role assessor() = req?j -> evaluate -> process -> score!j -> assessor();
+}
+
+connector ALERTConnector {
+    role detector(j) = incident -> alert!j -> Skip;
+    role responder() = alert?j -> handle -> process -> responder();
+}
+
+connector LOGConnector {
+    role emitter(j) = record -> log!j -> confirm?j -> Skip;
+    role logger() = log?j -> archive -> process -> confirm!j -> logger();
+}
+
+connector CMPConnector {
+    role initiator(j) = trigger_cmp -> cmp!j -> validate?j -> finalize -> Skip;
+    role compliance() = cmp?j -> analysis -> process -> validate!j -> compliance();
+}
+
+connector CHAINConnector {
+    role forwarder(j) = process -> out!j -> follow?j -> done -> Skip;
+    role handler() = out?j -> process -> follow!j -> handler();
+}
+
+component InvestmentPortal {
+    port invest() = start_invest -> invest();
+}
+
+component RiskAssessment {
+    port check() = assess -> check();
+}
+
+component AccountingSystem {
+    port record() = ledger -> record();
+}
+
+component AuditLog {
+    port capture() = logentry -> capture();
+}
+
+component FraudMonitor {
+    port react() = alert -> react();
+}
+
+component HRPortal {
+    port reporthours() = submit_hours -> reporthours();
+}
+
+component TimesheetValidator {
+    port validate() = checktimesheet -> validate();
+}
+
+component HRManager {
+    port approve() = approvehrs -> approve();
+}
+
+component PayrollEngine {
+    port process() = payroll -> process();
+}
+
+component HRLedger {
+    port recordpay() = hrentry -> recordpay();
+}
+
+component BIAnalyst {
+    port query() = biquery -> query();
+}
+
+component DataWarehouse {
+    port provide() = dataout -> provide();
+}
+
+component BIApproval {
+    port approve() = approvebi -> approve();
+}
+
+component ReportFormatter {
+    port format() = format -> format();
+}
+
+component NotificationService {
+    port notify() = send -> notify();
+}
+
+component TaxPortal {
+    port submit() = submit_tax -> submit();
+}
+
+component TaxDept {
+    port receive() = validate -> receive();
+}
+
+component LoanDesk {
+    port applyloan() = apply -> applyloan();
+}
+
+component CreditCheck {
+    port evaluate() = evaluate -> evaluate();
+}
+
+component AlertSystem {
+    port raise() = incident -> raise();
+}
+
+component IncidentHandler {
+    port resolve() = handle -> resolve();
+}
+
+component EventLogger {
+    port log() = record -> log();
+}
+
+component CompliancePortal {
+    port trigger() = trigger_cmp -> trigger();
+}
+
+component ComplianceEngine {
+    port analyze() = analysis -> analyze();
+}
+
+component DataRouter {
+    port send() = begin -> send();
+}
+
+component StagingProcessor {
+    port stage() = staged -> stage();
+}
+
+component LegalDept {
+    port verify() = verified -> verify();
+}
+
+system financeerp_complex {
+    declare investpipe = CSConnector;
+    declare riskcheck = CSConnector;
+    declare legalwire  = CSConnector;
+    declare auditlogpipe = ESConnector;
+
+    attach InvestmentPortal.invest() = investpipe.sender(101);
+    attach RiskAssessment.check() = investpipe.receiver() <*> riskcheck.sender(102) <*> legalwire.sender(104);
+    attach AccountingSystem.record() = riskcheck.receiver();
+    attach LegalDept.verify() = legalwire.receiver() <*> auditlogpipe.eventpublisher(103);
+    attach AuditLog.capture() = auditlogpipe.eventstore();
+    attach FraudMonitor.react() = auditlogpipe.eventsubscriber();
+
+    declare hrflow = CSConnector;
+    declare timesheetcheck = CSConnector;
+    declare approvalpipe = CSConnector;
+    declare hrpay = WRConnector;
+
+    attach HRPortal.reporthours() = hrflow.sender(201);
+    attach TimesheetValidator.validate() = hrflow.receiver() <*> timesheetcheck.sender(202);
+    attach HRManager.approve() = timesheetcheck.receiver() <*> approvalpipe.sender(203);
+    attach PayrollEngine.process() = approvalpipe.receiver() <*> hrpay.writer(204);
+    attach HRLedger.recordpay() = hrpay.writestorage();
+
+    declare biflow = QRConnector;
+    declare approvalbus = CSConnector;
+    declare formatpipe = WRConnector;
+    declare notifyline = REConnector;
+
+    attach BIAnalyst.query() = biflow.querier(301);
+    attach DataWarehouse.provide() = biflow.readstore() <*> approvalbus.sender(302);
+    attach BIApproval.approve() = approvalbus.receiver() <*> formatpipe.writer(303);
+    attach ReportFormatter.format() = formatpipe.writestorage() <*> notifyline.reader(304);
+    attach NotificationService.notify() = notifyline.readstorage();
+
+    declare taxflow = TXConnector;
+    attach TaxPortal.submit() = taxflow.taxpayer(401);
+    attach TaxDept.receive() = taxflow.taxoffice();
+
+    declare loanline = LOConnector;
+    attach LoanDesk.applyloan() = loanline.applicant(501);
+    attach CreditCheck.evaluate() = loanline.assessor();
+
+    declare alertflow = ALERTConnector;
+    attach AlertSystem.raise() = alertflow.detector(601);
+    attach IncidentHandler.resolve() = alertflow.responder();
+
+    declare cmpflow = CMPConnector;
+    attach CompliancePortal.trigger() = cmpflow.initiator(701);
+    attach ComplianceEngine.analyze() = cmpflow.compliance();
+
+    declare databus = CHAINConnector;
+    attach DataRouter.send() = databus.forwarder(801);
+    attach StagingProcessor.stage() = databus.handler();
+
+    execute InvestmentPortal.invest() || RiskAssessment.check() || LegalDept.verify() || AccountingSystem.record() || AuditLog.capture() || FraudMonitor.react() || HRPortal.reporthours() || TimesheetValidator.validate() || HRManager.approve() || PayrollEngine.process() || HRLedger.recordpay() || BIAnalyst.query() || DataWarehouse.provide() || BIApproval.approve() || ReportFormatter.format() || NotificationService.notify() || TaxPortal.submit() || TaxDept.receive() || LoanDesk.applyloan() || CreditCheck.evaluate() || AlertSystem.raise() || IncidentHandler.resolve() || CompliancePortal.trigger() || ComplianceEngine.analyze() || ValidationUnit.verify() || Finalization.finish() || DataRouter.send() || StagingProcessor.stage() || Follower.proceed();
+}

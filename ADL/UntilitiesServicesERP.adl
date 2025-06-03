@@ -1,0 +1,136 @@
+connector PSConnector { 
+	 role publisher(j) = process -> pub!j -> Skip;
+	 role subscriber() = pub?j -> process -> subscriber();
+ }
+
+connector CSConnector { 
+	 role requester(j) = process -> req!j -> res?j -> Skip;
+	 role responder() = req?j -> invoke -> process -> res!j -> responder();
+ }
+
+connector EQUIPConnector {
+    role fieldtech(j) = onboard_asset -> process -> equip!j -> confirm?j -> Skip;
+    role assetdb() = equip?j -> process -> catalog -> confirm!j -> assetdb();
+}
+
+connector ANALYTICConnector {
+    role iot(j) = stream_data -> process -> metric!j -> report?j -> Skip;
+    role diagnostics() = metric?j -> process -> analyze -> report!j -> diagnostics();
+}
+
+connector PROFITConnector {
+    role finance(j) = post_revenue -> process -> rev!j -> approved?j -> Skip;
+    role controlling() = rev?j -> process -> audit -> approved!j -> controlling();
+}
+
+connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+ }
+
+connector ALERTConnector {
+    role monitor(j) = trigger_alert -> process -> alert!j -> handled?j -> Skip;
+    role center() = alert?j -> process -> dispatch -> handled!j -> center();
+}
+
+connector COMPLIANCEConnector {
+    role initiator(j) = compliance_check -> process -> cmp!j -> validate?j -> finalize -> Skip;
+    role auditunit() = cmp?j -> process -> audit -> validate!j -> auditunit();
+}
+
+component ServicePortal {
+    port quote() = request_quote -> quote();
+    port contract() = submit_contract -> contract();
+    port alert() = trigger_alert -> alert();
+}
+
+component ServiceOffice {
+    port eval() = evaluate -> eval();
+    port submit() = submit_contract -> submit();
+}
+
+component LegalDept {
+    port sign() = review -> sign();
+}
+
+component TechCenter {
+    port onboard() = onboard_asset -> onboard();
+    port record() = post_revenue -> record();
+    port logevent() = emit -> logevent();
+}
+
+component AssetRegistry {
+    port add() = catalog -> add();
+}
+
+component IoTModule {
+    port stream() = stream_data -> stream();
+}
+
+component DiagnosticsUnit {
+    port diagnose() = analyze -> diagnose();
+}
+
+component FinanceSystem {
+    port revenue() = audit -> revenue();
+}
+
+component EventLogger {
+    port write() = log -> write();
+}
+
+component Archive {
+    port save() = store -> save();
+}
+
+component AlertCenter {
+    port respond() = dispatch -> respond();
+}
+
+component ComplianceService {
+    port check() = compliance_check -> check();
+}
+
+component AuditUnit {
+    port inspect() = inspected -> inspect();
+}
+
+system UntilitiesServicesERP {
+    declare quotelink = PSConnector;
+    declare contractlink = CSConnector;
+    declare equiplink = EQUIPConnector;
+    declare streambus = ANALYTICConnector;
+    declare revlink = PROFITConnector;
+    declare logflow = ESConnector;
+    declare alertflow = ALERTConnector;
+    declare compliancecheck = COMPLIANCEConnector;
+
+    attach ServicePortal.quote() = quotelink.publisher(101);
+    attach ServiceOffice.eval() = quotelink.subscriber();
+
+    attach ServicePortal.contract() = contractlink.requester(102);
+    attach LegalDept.sign() = contractlink.responder();
+
+    attach TechCenter.onboard() = equiplink.fieldtech(201);
+    attach AssetRegistry.add() = equiplink.assetdb();
+
+    attach IoTModule.stream() = streambus.iot(301);
+    attach DiagnosticsUnit.diagnose() = streambus.diagnostics();
+
+    attach TechCenter.record() = revlink.finance(401);
+    attach FinanceSystem.revenue() = revlink.controlling();
+
+    attach TechCenter.logevent() = logflow.eventpublisher(501);
+    attach Archive.save() = logflow.eventstore();
+    attach EventLogger.write() = logflow.eventsubscriber();
+  
+
+    attach ServicePortal.alert() = alertflow.monitor(601);
+    attach AlertCenter.respond() = alertflow.center();
+
+    attach ComplianceService.check() = compliancecheck.initiator(701);
+    attach AuditUnit.inspect() = compliancecheck.auditunit();
+
+    execute ServicePortal.quote() || ServiceOffice.eval() || ServicePortal.contract() || LegalDept.sign() || TechCenter.onboard() || AssetRegistry.add() || IoTModule.stream() || DiagnosticsUnit.diagnose() || TechCenter.record() || FinanceSystem.revenue() || TechCenter.logevent() || EventLogger.write() || Archive.save() || ServicePortal.alert() || AlertCenter.respond() || ComplianceService.check() || AuditUnit.inspect();
+}

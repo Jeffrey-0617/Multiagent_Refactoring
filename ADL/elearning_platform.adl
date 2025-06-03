@@ -1,0 +1,140 @@
+connector ENROLLConnector {
+    role student(j) = select_course -> process -> enroll!j -> process -> confirm?j -> Skip;
+    role platform() = enroll?j -> process -> register -> confirm!j -> platform();
+}
+
+connector CONTENTConnector {
+    role instructor(j) = upload_material -> process -> content!j -> process -> publish?j -> Skip;
+    role repository() = content?j -> process -> organize -> publish!j -> repository();
+}
+
+connector ISSUEConnector {
+    role user(j) = report_problem -> process -> ticket!j -> process -> solution?j -> Skip;
+    role support() = ticket?j -> process -> diagnose -> solution!j -> support();
+}
+
+connector MONITORConnector {
+    role server(j) = generate_log -> process -> metric!j -> process -> analyzed?j -> Skip;
+    role analytics() = metric?j -> process -> evaluate -> analyzed!j -> analytics();
+}
+
+connector CSConnector { 
+	 role requester(j) = process -> req!j -> res?j -> Skip;
+	 role responder() = req?j -> invoke -> process -> res!j -> responder();
+}
+
+connector REConnector { 
+	 role reader(j) = process -> req!j -> res?j -> Skip;
+	 role readstorage() = req?j -> invoke -> process -> res!j -> readstorage();
+}
+
+ connector ESConnector { 
+	 role eventpublisher(j) = process -> pevt!j -> sevt?j -> bevt!j -> broadcast -> Skip;
+	 role eventsubscriber() = bevt?j -> process -> eventsubscriber();
+	 role eventstore() = pevt?j -> process -> sevt!j -> persist -> eventstore();
+}
+
+connector WRConnector { 
+	 role writer(j) = process -> req!j -> res?j -> Skip;
+	 role writestorage() = req?j -> invoke -> process -> res!j -> writestorage();
+}
+
+connector PSConnector { 
+	 role publisher(j) = process -> pub!j -> Skip;
+	 role subscriber() = pub?j -> process -> subscriber();
+}
+
+component StudentUI {
+    port enroll() = select_course -> enroll();
+    port report() = report_problem -> report();
+    port marknotify() = marknotified -> marknotify();
+    port postquestion() = questionposted -> postquestion();
+    port answernotify() = answernotified -> answernotify();
+}
+
+component InstructorUI {
+    port upload() = upload_material -> upload();
+    port mark() = marked -> mark();
+}
+
+component AdminUI {
+    port monitor() = generate_log -> monitor();
+}
+
+component CourseRepo {
+    port publish() = organize -> publish();
+    port get() = getdata -> get();
+}
+
+component SupportCenter {
+    port diagnose() = diagnosed -> diagnose();
+}
+
+component AnalyticsCenter {
+    port evaluate() = evaluatd -> evaluate();
+}
+
+component MarkingMgmt {
+    port accept() = accepted -> accept();
+}
+
+component SignOn {
+    port auth() = authenticated -> auth();
+}
+
+component Markinglog {
+    port record() = recorded -> record();
+}
+
+component DiscussionMgmt {
+    port receivequestion() = questionreceived -> receivequestion();
+}
+
+component TutorUI {
+    port questionnotify() = questionnotified -> questionnotify();
+}
+
+component QALog {
+    port answerlist() = answerlisted -> answerlist();
+}
+
+system elearning_platform {
+    declare enrollwire = ENROLLConnector;
+    declare contentwire = CONTENTConnector;
+    declare issuewire = ISSUEConnector;
+    declare monitorwire = MONITORConnector;
+    declare markingwire = CSConnector;
+    declare authwire = CSConnector;
+    declare retrievewire = REConnector;
+    declare assignwire = ESConnector;
+    declare postwire = WRConnector;
+    declare forwardwire = PSConnector;
+    declare answerwire = ESConnector;
+
+    attach StudentUI.enroll() = enrollwire.student(101);
+    attach CourseRepo.publish() = enrollwire.platform();
+
+    attach InstructorUI.upload() = contentwire.instructor(201);
+    attach CourseRepo.publish() = contentwire.repository();
+
+    attach StudentUI.report() = issuewire.user(301);
+    attach SupportCenter.diagnose() = issuewire.support();
+
+    attach AdminUI.monitor() = monitorwire.server(401);
+    attach AnalyticsCenter.evaluate() = monitorwire.analytics();
+    
+    attach InstructorUI.mark() = markingwire.requester(501);
+    attach MarkingMgmt.accept() = markingwire.responder() <*> authwire.requester(502) <*> retrievewire.reader(503) <*> assignwire.eventpublisher(504);
+    attach SignOn.auth() = authwire.responder();
+    attach CourseRepo.get() = retrievewire.readstorage();
+    attach Markinglog.record() = assignwire.eventstore();
+    attach StudentUI.marknotify() = assignwire.eventsubscriber();
+
+    attach StudentUI.postquestion() = postwire.writer(601);
+    attach DiscussionMgmt.receivequestion() = postwire.writestorage() <*> forwardwire.publisher(602);
+    attach TutorUI.questionnotify() = forwardwire.subscriber() <*> answerwire.eventpublisher(603);
+    attach QALog.answerlist() = answerwire.eventstore();
+    attach StudentUI.answernotify() = answerwire.eventsubscriber();
+
+    execute StudentUI.enroll() || CourseRepo.publish() || InstructorUI.upload() || StudentUI.report() || SupportCenter.diagnose() || AdminUI.monitor() || AnalyticsCenter.evaluate() || InstructorUI.mark() || MarkingMgmt.accept() || SignOn.auth() || CourseRepo.get() || Markinglog.record() || StudentUI.marknotify() || StudentUI.postquestion() || DiscussionMgmt.receivequestion() || TutorUI.questionnotify() || QALog.answerlist() || StudentUI.answernotify();
+}
