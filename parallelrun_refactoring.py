@@ -21,7 +21,7 @@ from divide_adl import get_verification_results_with_adl
 
 
 # ----------------------
-# Function to execute notebook cell with tag
+# Function to execute the refactoring process
 # ----------------------
 def build_execution_env(adl_file_name, new_requirement, run_id):
     return {
