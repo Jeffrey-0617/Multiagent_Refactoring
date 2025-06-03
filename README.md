@@ -31,12 +31,11 @@ Multiagent_Refactoring/
 │
 ├── Helpers/                    # Core functions
 │   ├── refactoring.py          # MAARVEL core implementation
-│   ├── preprocessing.py        # Path execution generation
 │   ├── divide_adl.py           # Design partitioning strategy
 │
-├── Refactoring_data.xlsx       # List containing refactoring tasks (ADL files and requirements)
+├── Refactoring_data.xlsx       # List of refactoring tasks (ADL files and requirements)
 │
-└── parallelrun_refactoring.py  # Main script implementing MAARVEL with Exploration-Selection Strategys
+└── parallelrun_refactoring.py  # The MAARVEL with Exploration-Selection Strategys
 ```
 
 ## Usage
