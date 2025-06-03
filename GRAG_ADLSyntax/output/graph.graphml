@@ -1,0 +1,92 @@
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <graph edgedefault="undirected">
+    <node id="WRIGHT#" />
+    <node id="PAT" />
+    <node id="CSP PROCESS ALGEBRA" />
+    <node id="CONNECTOR DEFINITIONS" />
+    <node id="COMPONENT DEFINITIONS" />
+    <node id="LABELLED TRANSITION SYSTEM (LTS)" />
+    <node id="COMPONENT" />
+    <node id="PUBLISH-SUBSCRIBE" />
+    <node id="CONNECTOR" />
+    <node id="CLIENT-SERVER" />
+    <node id="CSCONNECTOR" />
+    <node id="ESCONNECTOR" />
+    <node id="PASSENGERUI" />
+    <node id="TRIPMGMT" />
+    <node id="ROCONNECTOR" />
+    <node id="DRIVERUI" />
+    <node id="CALLWIRE" />
+    <node id="ASSIGNWIRE" />
+    <node id="RIDESHARE SYSTEM" />
+    <node id="PASSENGER UI" />
+    <node id="TRIP MGMT" />
+    <node id="DRIVER UI" />
+    <node id="DRIVER RECORD" />
+    <node id="PAYMENT" />
+    <node id="BILLING GATEWAY" />
+    <node id="SIGN ON" />
+    <node id="USER DB" />
+    <node id="ASSIGN LOG" />
+    <node id="DRIVER COMMAND LOG" />
+    <node id="CS CONNECTOR" />
+    <node id="RO CONNECTOR" />
+    <node id="ES CONNECTOR" />
+    <node id="CR CONNECTOR" />
+    <node id="WR CONNECTOR" />
+    <node id="RE CONNECTOR" />
+    <node id="PS CONNECTOR" />
+    <node id="QR CONNECTOR" />
+    <node id="IO CONNECTOR" />
+    <node id="DRIVERRECORD" />
+    <node id="SIGNON" />
+    <node id="USERDB" />
+    <node id="DRIVERCOMMANDLOG" />
+    <node id="BILLINGGATEWAY" />
+    <edge source="WRIGHT#" target="PAT" />
+    <edge source="WRIGHT#" target="CSP PROCESS ALGEBRA" />
+    <edge source="WRIGHT#" target="CONNECTOR DEFINITIONS" />
+    <edge source="WRIGHT#" target="COMPONENT DEFINITIONS" />
+    <edge source="WRIGHT#" target="LABELLED TRANSITION SYSTEM (LTS)" />
+    <edge source="COMPONENT DEFINITIONS" target="COMPONENT" />
+    <edge source="PUBLISH-SUBSCRIBE" target="CONNECTOR" />
+    <edge source="CONNECTOR" target="CLIENT-SERVER" />
+    <edge source="CONNECTOR" target="CSCONNECTOR" />
+    <edge source="CONNECTOR" target="ESCONNECTOR" />
+    <edge source="CSCONNECTOR" target="PASSENGERUI" />
+    <edge source="CSCONNECTOR" target="TRIPMGMT" />
+    <edge source="PASSENGERUI" target="CALLWIRE" />
+    <edge source="PASSENGERUI" target="TRIPMGMT" />
+    <edge source="PASSENGERUI" target="DRIVERRECORD" />
+    <edge source="PASSENGERUI" target="DRIVERUI" />
+    <edge source="PASSENGERUI" target="PAYMENT" />
+    <edge source="PASSENGERUI" target="SIGNON" />
+    <edge source="PASSENGERUI" target="USERDB" />
+    <edge source="TRIPMGMT" target="CALLWIRE" />
+    <edge source="TRIPMGMT" target="ASSIGNWIRE" />
+    <edge source="ROCONNECTOR" target="DRIVERUI" />
+    <edge source="DRIVERUI" target="ASSIGNWIRE" />
+    <edge source="DRIVERUI" target="DRIVERRECORD" />
+    <edge source="DRIVERUI" target="DRIVERCOMMANDLOG" />
+    <edge source="RIDESHARE SYSTEM" target="PASSENGER UI" />
+    <edge source="RIDESHARE SYSTEM" target="TRIP MGMT" />
+    <edge source="RIDESHARE SYSTEM" target="DRIVER UI" />
+    <edge source="RIDESHARE SYSTEM" target="DRIVER RECORD" />
+    <edge source="RIDESHARE SYSTEM" target="PAYMENT" />
+    <edge source="RIDESHARE SYSTEM" target="BILLING GATEWAY" />
+    <edge source="RIDESHARE SYSTEM" target="SIGN ON" />
+    <edge source="RIDESHARE SYSTEM" target="USER DB" />
+    <edge source="RIDESHARE SYSTEM" target="ASSIGN LOG" />
+    <edge source="RIDESHARE SYSTEM" target="DRIVER COMMAND LOG" />
+    <edge source="RIDESHARE SYSTEM" target="CS CONNECTOR" />
+    <edge source="RIDESHARE SYSTEM" target="RO CONNECTOR" />
+    <edge source="RIDESHARE SYSTEM" target="ES CONNECTOR" />
+    <edge source="RIDESHARE SYSTEM" target="CR CONNECTOR" />
+    <edge source="RIDESHARE SYSTEM" target="WR CONNECTOR" />
+    <edge source="RIDESHARE SYSTEM" target="RE CONNECTOR" />
+    <edge source="RIDESHARE SYSTEM" target="PS CONNECTOR" />
+    <edge source="RIDESHARE SYSTEM" target="QR CONNECTOR" />
+    <edge source="RIDESHARE SYSTEM" target="IO CONNECTOR" />
+    <edge source="PAYMENT" target="BILLINGGATEWAY" />
+  </graph>
+</graphml>
